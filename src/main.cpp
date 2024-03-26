@@ -1,43 +1,58 @@
-#include <DHT.h> // library for DHT sensor
+#include <SPI.h>
+#include <SD.h>
+#include <DHT.h>
 
-#define DHTPIN 2 // Pin number in arduino  that is connected to my DHt22 data pin
-#define DHTTYPE DHT22 // Defining my DHT sensor
+#define DHTPIN 2
+#define DHTTYPE DHT22 
 DHT dht(DHTPIN, DHTTYPE);
 
-int greenLEDPin = 9; // Green led is for "OK" status
-int redLEDPin = 8;   // this Red led is for "!OK" status
+File myFile;
+int chipSelect = 4;
 
 void setup() {
-  Serial.begin(9600);  
+  Serial.begin(9600);
   dht.begin();
-  
-  pinMode(greenLEDPin, OUTPUT);
-  pinMode(redLEDPin, OUTPUT);
+
+  // Initializing my SD card
+  SD.begin(chipSelect);
+
+  // Checking for SD card 
+  if (!SD.begin(chipSelect)) {
+    Serial.println("SD card initialization failed!");
+    return;
+  }
+  Serial.println("SD card initialized.");
 }
 
 void loop() {
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
 
-  if (isnan(humidity) || isnan(temperature)) {
-    Serial.println("Failed to read from DHT sensor!");
-    return;
-  }
+    // so you have to close this one before opening another.
+  myFile = SD.open("datalog.txt", FILE_WRITE);
 
-  Serial.print("Humidity: "); 
-  Serial.print(humidity);
-  Serial.print(" %\t");
-  Serial.print("Temperature: "); 
-  Serial.print(temperature);
-  Serial.println(" *C ");
-
-  if (temperature >= 20 && temperature <= 25 && humidity >= 60 && humidity <= 70) {
-    digitalWrite(greenLEDPin, HIGH);
-    digitalWrite(redLEDPin, LOW);
+  // If the file opened okay, write to it:
+  if (myFile) {
+    myFile.print("Temperature: ");
+    myFile.print(temperature);
+    myFile.print(" C, Humidity: ");
+    myFile.print(humidity);
+    myFile.println(" %");
+    
+    // Close the file:
+    myFile.close();
   } else {
-    digitalWrite(greenLEDPin, LOW);
-    digitalWrite(redLEDPin, HIGH);
+    // if the file didn't open, print an error:
+    Serial.println("Error opening datalog.txt");
   }
 
-  delay(2000); // Delay for 2 seconds
+  //  outputing temp and humidity 
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.print(" C, Humidity: ");
+  Serial.print(humidity);
+  Serial.println(" %");
+
+  // this will cause a delay of 5 seconds before this loop reruns
+  delay(5000);
 }
